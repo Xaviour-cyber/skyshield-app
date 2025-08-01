@@ -4,7 +4,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from sklearn.cluster import KMeans
 from cryptography.fernet import Fernet
 import requests
@@ -96,26 +96,36 @@ if st.button("🔎 Jalankan Clustering"):
 
     df['rekomendasi'] = rekomendasi
 
-    # Simpan ke database
-    for i, row in df.iterrows():
+    for _, row in df.iterrows():
         cursor.execute("INSERT INTO cuaca (suhu, kelembapan, curah_hujan, cluster, rekomendasi) VALUES (?,?,?,?,?)",
-    (row['suhu'], row['kelembapan'], row['curah_hujan'], row['cluster'], row['rekomendasi']))
-
+                       (row['suhu'], row['kelembapan'], row['curah_hujan'], int(row['cluster']), row['rekomendasi']))
     conn.commit()
+
     st.success("Clustering selesai dan data disimpan")
     st.dataframe(df)
-    # Visualisasi Cluster
-    st.subheader("📈 Visualisasi Cluster")
-    fig, ax = plt.subplots()
-    warna = ['green', 'orange', 'red']
+
+    # Visualisasi menggunakan Plotly
+    st.subheader("📈 Visualisasi Cluster Cuaca")
+    warna_cluster = {0: 'green', 1: 'orange', 2: 'red'}
+    fig = go.Figure()
     for i in range(3):
         clus = df[df['cluster'] == i]
-        ax.scatter(clus['suhu'], clus['curah_hujan'], color=warna[i], label=f'Cluster {i}')
-    ax.set_xlabel('Suhu (°C)')
-    ax.set_ylabel('Curah Hujan (mm)')
-    ax.set_title('Visualisasi Cluster')
-    ax.legend()
-    st.pyplot(fig)
+        fig.add_trace(go.Scatter(
+            x=clus['suhu'],
+            y=clus['curah_hujan'],
+            mode='markers',
+            name=f'Cluster {i}',
+            marker=dict(size=12, color=warna_cluster[i])
+        ))
+    fig.update_layout(
+        title='Visualisasi Cluster Cuaca',
+        xaxis_title='Suhu (°C)',
+        yaxis_title='Curah Hujan (mm)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='white')
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 # --- HISTORI DATABASE ---
 st.subheader("🕒 Riwayat Cuaca Tersimpan")
